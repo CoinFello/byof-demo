@@ -5,6 +5,12 @@ const TARGET = "https://app.coinfello.com/api/a2a";
 export async function POST(req: NextRequest) {
   const body = await req.text();
 
+  console.log("[a2a proxy] ← incoming request", {
+    url: req.url,
+    bodyLength: body.length,
+    body: body.slice(0, 500),
+  });
+
   const upstream = await fetch(TARGET, {
     method: "POST",
     headers: {
@@ -14,9 +20,16 @@ export async function POST(req: NextRequest) {
     body,
   });
 
+  console.log("[a2a proxy] → upstream response", {
+    status: upstream.status,
+    contentType: upstream.headers.get("content-type"),
+    setCookies: upstream.headers.getSetCookie().length,
+  });
+
   // Check if this is a streaming response (SSE)
   const contentType = upstream.headers.get("content-type") || "";
   if (contentType.includes("text/event-stream")) {
+    console.log("[a2a proxy] streaming SSE response");
     const res = new NextResponse(upstream.body, {
       status: upstream.status,
       headers: {
@@ -33,6 +46,13 @@ export async function POST(req: NextRequest) {
   }
 
   const data = await upstream.text();
+
+  console.log("[a2a proxy] → response body", {
+    status: upstream.status,
+    dataLength: data.length,
+    data: data.slice(0, 500),
+  });
+
   const res = new NextResponse(data, {
     status: upstream.status,
     headers: { "Content-Type": "application/json" },

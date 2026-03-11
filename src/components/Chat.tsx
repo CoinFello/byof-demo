@@ -5,14 +5,15 @@ import { useAccount, useSignMessage } from "wagmi";
 import { useAppKit } from "@reown/appkit/react";
 import { fetchNonce, createSiweMessage, verifySiwe } from "@/lib/siwe";
 import {
-  streamMessage,
+  sendMessage,
   streamFunctionReturn,
   type A2APart,
   type StreamEvent,
 } from "@/lib/a2a";
 import ToolCallCard from "./ToolCallCard";
 
-const AGENT_ID = 1; // CoinFello chat agent
+const AGENT_CARD_URL =
+  "https://app.coinfello.com/agent/chat/.well-known/agent-card.json";
 
 interface ChatMessage {
   role: "user" | "agent";
@@ -31,9 +32,23 @@ export default function Chat() {
   const [authLoading, setAuthLoading] = useState(false);
   const [taskId, setTaskId] = useState<string | undefined>();
   const [streamingText, setStreamingText] = useState("");
+  const [agentId, setAgentId] = useState<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    async function fetchAgentId() {
+      try {
+        const res = await fetch(AGENT_CARD_URL);
+        const card = await res.json();
+        setAgentId(Number(card.skills[0].id));
+      } catch (err) {
+        console.error("Failed to fetch agent card:", err);
+      }
+    }
+    fetchAgentId();
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -113,25 +128,31 @@ export default function Chat() {
     const collectedParts: A2APart[] = [];
 
     try {
-      await streamMessage(text, AGENT_ID, taskId, processStreamEvents(collectedParts));
+      if (agentId === null){
+        throw new Error('null agent id')
+      }
+      const response = await sendMessage(text, agentId, taskId);
+      console.log("[chat] sendMessage response:", JSON.stringify(response, null, 2));
+      if (response.error) {
+        console.error("Send failed:", response.error);
+        collectedParts.push({ type: "text", text: response.error.message });
+      } else if (response.result) {
+        if (response.result.id && !taskId) {
+          setTaskId(response.result.id);
+        }
+        if (response.result.status?.message) {
+          collectedParts.push(...response.result.status.message.parts);
+        }
+      }
     } catch (err) {
-      console.error("Stream failed:", err);
+      console.error("Send failed:", err);
       collectedParts.push({ type: "text", text: "Connection error. Please try again." });
     }
 
-    // Finalize the agent message from streaming text + any collected parts
-    setStreamingText((currentStreamText) => {
-      const finalParts: A2APart[] = [];
-      if (currentStreamText) {
-        finalParts.push({ type: "text", text: currentStreamText });
-      }
-      finalParts.push(...collectedParts);
-
-      if (finalParts.length > 0) {
-        setMessages((prev) => [...prev, { role: "agent", parts: finalParts }]);
-      }
-      return "";
-    });
+    if (collectedParts.length > 0) {
+      setMessages((prev) => [...prev, { role: "agent", parts: collectedParts }]);
+    }
+    setStreamingText("");
 
     setIsLoading(false);
     inputRef.current?.focus();
@@ -153,7 +174,7 @@ export default function Chat() {
         callId,
         name,
         result,
-        AGENT_ID,
+        agentId!,
         taskId,
         processStreamEvents(collectedParts),
       );
