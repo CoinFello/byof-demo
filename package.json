@@ -1,5 +1,5 @@
 {
-  "name": "byof-demo-temp",
+  "name": "byof-demo",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,9 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@reown/appkit": "^1.8.19",
+    "@reown/appkit-adapter-wagmi": "^1.8.19",
+    "@tanstack/react-query": "^5.90.21",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "viem": "^2.47.1",
+    "wagmi": "^3.5.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
