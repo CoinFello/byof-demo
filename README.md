@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CoinFello BYOF Demo
+
+A "Bring Your Own Frontend" demo that integrates with the [CoinFello](https://app.coinfello.com) AI agent via the [A2A (Agent-to-Agent) protocol](http://docs.coinfello.com/agent/byof). Users connect a wallet, authenticate with SIWE (Sign-In With Ethereum), and chat with the CoinFello agent for DeFi operations like swaps, bridging, staking, and portfolio management.
+
+## Architecture
+
+- **Next.js** frontend with React 19 and Tailwind CSS
+- **Reown AppKit + Wagmi** for wallet connection (Ethereum, Arbitrum, Optimism, Polygon, Base)
+- **SIWE** authentication flow (nonce → sign → verify)
+- **A2A proxy** (`/api/proxy/a2a`) forwards JSON-RPC requests to the CoinFello backend, supporting both request/response and SSE streaming
+- **Agent discovery** via the [agent card](https://app.coinfello.com/agent/chat/.well-known/agent-card.json) — the agent skill ID is fetched dynamically at runtime
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- A WalletConnect project ID from [Reown Cloud](https://cloud.reown.com)
+
+### Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
+# Edit .env.local and set your WalletConnect project ID
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Run
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/
+│   ├── api/proxy/a2a/   # A2A reverse proxy to CoinFello backend
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/
+│   ├── Chat.tsx          # Main chat UI
+│   ├── Providers.tsx     # Wagmi + AppKit + React Query providers
+│   ├── AppContent.tsx    # App shell
+│   └── ToolCallCard.tsx  # Renders agent tool calls (e.g. swap confirmations)
+└── lib/
+    ├── a2a.ts            # A2A JSON-RPC client (send, stream, function returns)
+    └── siwe.ts           # SIWE auth helpers (nonce, message, verify)
+```
