@@ -15,6 +15,32 @@ import ToolCallCard from "./ToolCallCard";
 const AGENT_CARD_URL =
   "https://app.coinfello.com/agent/chat/.well-known/agent-card.json";
 
+/** Expand `data` parts with `client_tool_calls` into individual `functionCall` parts. */
+function expandParts(parts: A2APart[]): A2APart[] {
+  const result: A2APart[] = [];
+  for (const part of parts) {
+    if (
+      part.type === "data" &&
+      part.data?.type === "client_tool_calls" &&
+      Array.isArray(part.data.toolCalls)
+    ) {
+      for (const tc of part.data.toolCalls) {
+        result.push({
+          type: "functionCall",
+          id: tc.callId,
+          name: tc.name,
+          parameters: typeof tc.arguments === "string"
+            ? JSON.parse(tc.arguments)
+            : tc.arguments,
+        });
+      }
+    } else {
+      result.push(part);
+    }
+  }
+  return result;
+}
+
 interface ChatMessage {
   role: "user" | "agent";
   parts: A2APart[];
@@ -97,13 +123,13 @@ export default function Chat() {
           if (r.part.type === "text" && r.part.text) {
             setStreamingText((prev) => prev + r.part!.text);
           } else {
-            currentParts.push(r.part);
+            currentParts.push(...expandParts([r.part]));
           }
         }
 
         if (r.type === "task/status-update" && r.status?.message) {
           // Status update with final message — accumulate any parts
-          for (const p of r.status.message.parts) {
+          for (const p of expandParts(r.status.message.parts)) {
             if (p.type === "text" && p.text) {
               setStreamingText((prev) => prev + p.text);
             } else {
@@ -141,7 +167,7 @@ export default function Chat() {
           setTaskId(response.result.id);
         }
         if (response.result.status?.message) {
-          collectedParts.push(...response.result.status.message.parts);
+          collectedParts.push(...expandParts(response.result.status.message.parts));
         }
       }
     } catch (err) {

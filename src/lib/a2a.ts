@@ -12,6 +12,8 @@ export interface A2APart {
   id?: string;
   parameters?: Record<string, unknown>;
   result?: Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data?: Record<string, any>;
 }
 
 export interface A2AMessage {
