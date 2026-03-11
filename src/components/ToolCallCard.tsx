@@ -26,7 +26,9 @@ export default function ToolCallCard({ part, onResult }: ToolCallCardProps) {
     setError(null);
 
     try {
-      const chainId = (params.chainId as number) || 1;
+      const chainId = name === "execute_lifi_swap"
+        ? (params.fromChainId as number)
+        : (params.chainId as number) || 1;
 
       try {
         await switchChainAsync({ chainId });
